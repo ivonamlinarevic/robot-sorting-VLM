@@ -1039,13 +1039,13 @@ class VisionLanguagePandaSimulation:
         # Step 7: Execute pick and place
         print("7. Executing pick and place operation...")
         success = self.pick_object(selected_object)
-        
+        """
         if success:
             self.place_object_in_sorting_zone(selected_object)
             print(f"✓ Successfully completed pick and place for '{text_prompt}'!")
         else:
             print(f"✗ Failed to pick up {selected_object}")
-        
+        """
         return {
             'selected_object': selected_object,
             'similarity_scores': similarity_scores,

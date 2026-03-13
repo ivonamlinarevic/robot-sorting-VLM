@@ -33,10 +33,11 @@ def main():
     print("=" * 40)
     print("Choose your demo mode:")
     print("1. 🎨 Automatic Color Sorting")
-    print("2. 🎯 Interactive Text Prompts (enter custom prompts)")
+    print("2. 🎯 Interactive Text Prompts")
+    print("3. 🧠 Natural Language Commands")
     print()
     
-    choice = input("Select mode (1/2, default=1): ").strip()
+    choice = input("Select mode (1/2/3, default=3): ").strip()
     
     print("\nThe robot will work with these objects and zones:")
     print("• Objects: Red cube, blue cube, green sphere, yellow cylinder")
@@ -94,7 +95,7 @@ def main():
         if choice == "2":
             # Interactive text prompts only
             run_interactive_text_prompt_demo(sim)
-        else:
+        elif choice == "1":
             # Automatic color sorting (default)
             # print("\n🎨 Starting automatic color sorting...")
             # results = sim.run_color_sorting_demo(visualize=True)
@@ -126,7 +127,17 @@ def main():
                 print("🏆 Perfect sorting! All objects placed in correct zones.")
             else:
                 print("⚠️  Some objects could not be sorted correctly.")
-        
+        else:
+
+            while True:
+
+                command = input("\nEnter command (or 'exit'): ")
+
+                if command.lower() == "exit":
+                    break
+
+                execute_language_command(sim, command)
+                
         print("\nPress Enter to exit...")
         input()
         
@@ -725,6 +736,61 @@ def throw_object_away(sim, object_name):
     # Return to home with satisfaction
     print("   🏠 Mission accomplished, returning home...")
     sim.move_to_position(sim.home_position)
+    
+def parse_language_command(command):
+
+    command = command.lower()
+
+    colors = ["red", "blue", "green", "yellow"]
+
+    object_color = None
+    target_zone = None
+
+    for color in colors:
+
+        if f"{color} object" in command:
+            object_color = color
+
+        if f"{color} box" in command or f"{color} zone" in command:
+            target_zone = f"{color}_zone"
+
+    return object_color, target_zone
+    
+def execute_language_command(sim, command):
+
+    print(f"\n🧠 Understanding command: {command}")
+
+    object_color, target_zone = parse_language_command(command)
+
+    if object_color is None:
+        print("❌ Could not detect object color")
+        return
+
+    if target_zone is None:
+        print("❌ Could not detect target zone")
+        return
+
+    print(f"Target object color: {object_color}")
+    print(f"Target zone: {target_zone}")
+
+    prompt = f"{object_color} object"
+
+    result = sim.run_vision_guided_pick_and_place(
+        prompt,
+        visualize=True
+    )
+
+    if result and result["success"]:
+
+        selected_object = result["selected_object"]
+
+        print(f"📦 Moving {selected_object} to {target_zone}")
+
+        place_object_in_specific_zone(
+            sim,
+            selected_object,
+            target_zone
+        )
 
 
 if __name__ == "__main__":
