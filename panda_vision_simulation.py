@@ -96,25 +96,31 @@ class VisionLanguagePandaSimulation:
                 'size': [0.15, 0.15, 0.02]
             },
             'green_zone': {
-                'position': [0.7, 0.3, 0.65],   # Right side
+                'position': [0.7, -0.3, 0.65],   # Right side
                 'color': [0, 1, 0, 0.3],        # Semi-transparent green
                 'size': [0.15, 0.15, 0.02]
             },
             'yellow_zone': {
-                'position': [0.7, -0.3, 0.65],  # Right side, back
+                'position': [0.7, 0.3, 0.65],  # Right side, back
                 'color': [1, 1, 0, 0.3],        # Semi-transparent yellow
                 'size': [0.15, 0.15, 0.02]
             }
         }
         
     def place_object_in_specific_zone(self, object_name, zone_name):
+    
+        zone_centers = self.detect_zones_visually()
 
         if zone_name not in self.sorting_zones:
             print(f"❌ Unknown zone: {zone_name}")
             return
 
+        # zone_config = self.sorting_zones[zone_name]
+        # zone_position = zone_config['position']
         zone_config = self.sorting_zones[zone_name]
-        zone_position = zone_config['position']
+        zone_id = self.zone_ids[zone_name]
+        zone_position, _ = p.getBasePositionAndOrientation(zone_id)
+
         zone_color = zone_name.replace('_zone', '').upper()
 
         print(f"   Placing {object_name} in {zone_color} zone at {zone_position}")
@@ -936,6 +942,7 @@ class VisionLanguagePandaSimulation:
         Args:
             object_name (str): Name of the object to determine target zone
         """
+        zone_centers = self.detect_zones_visually()
         print(f"Placing {object_name} in appropriate sorting zone...")
         
         # Determine target zone based on object color
@@ -1511,6 +1518,69 @@ class VisionLanguagePandaSimulation:
         )
 
         return camera_image, precise_bounding_boxes, masked_crops, object_descriptors
+        
+    def get_zone_masks(self, segmentation_array):
+
+        zone_masks = {}
+
+        for zone_name, zone_id in self.zone_ids.items():
+
+            mask = (segmentation_array == zone_id).astype(np.uint8)
+    
+            if np.any(mask):
+                zone_masks[zone_name] = mask
+
+        return zone_masks
+        
+    def get_zone_centers(self, zone_masks):
+
+        zone_centers = {}
+
+        for zone_name, mask in zone_masks.items():
+
+            coords = np.nonzero(mask)
+
+            if len(coords[0]) == 0:
+                continue
+
+            y_coords, x_coords = coords
+
+            cx = int(x_coords.mean())
+            cy = int(y_coords.mean())
+
+            zone_centers[zone_name] = (cx, cy)
+
+        return zone_centers    
+        
+    def detect_zones_visually(self):
+
+        image, depth, segmentation = self.capture_camera_image_with_segmentation()
+
+        zone_masks = self.get_zone_masks(segmentation)
+
+        zone_centers = self.get_zone_centers(zone_masks)
+
+        print("\n👁️ Visual zone detection activated")
+        
+        if len(zone_centers) == 0:
+            print("⚠️ No zones detected!")
+            return {}
+        
+        print("Detected zones (pixel centers):")
+
+        for zone, center in zone_centers.items():
+            print(zone, "->", center)
+
+        plt.imshow(image)
+        for zone, (cx, cy) in zone_centers.items():
+            plt.scatter(cx, cy, s=200)
+            plt.text(cx, cy, zone, color="white")
+        plt.title("Detected Sorting Zones")
+        plt.show()
+
+
+        return zone_centers
+  
 
 # This file is intended to be imported as a module.
 # Do not run as a standalone script.
