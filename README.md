@@ -78,7 +78,7 @@ python3 sorting_vlm.py
 When you start the demo, you will be prompted to choose a mode:
 
 1. **Automatic Color/Shape/Size Sorting**: The robot will automatically sort all objects into their matching zones.
-2. **Interactive Text Prompt**: You can enter text prompts to select which object the robot should pick up, and choose where to place it ("pick up the yellow object").
+2. **Interactive Text Prompt**: You can enter text prompts to select which object(s) the robot should pick up, and choose where to place it ("pick up the yellow object", "stack blue cubes").
 3. **Natural Language Commands**: This mode allows the robot to follow simple natural language instructions ("move the blue object to the red box").
 
 Follow the on-screen instructions to interact with the robot and sorting zones.
@@ -123,10 +123,6 @@ Joint control uses position control mode:
 - **Position Control**: Joints move to target positions
 - **Gripper Control**: Two-finger gripper with synchronized motion
 
-## Future Enhancements
-
-Possible extensions to this project:
-- Enable multi-object reasoning for commands involving relationships (e.g., “Stack all blue cubes, then put the red sphere on top”).
 
 ## Resources
 

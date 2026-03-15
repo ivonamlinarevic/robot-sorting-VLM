@@ -195,6 +195,37 @@ def run_interactive_text_prompt_demo(sim):
                 print("⚠️  Please enter a valid prompt!")
                 continue
             
+            prompt_lower = prompt.lower()
+
+            # STACK COMMAND
+            if "stack" in prompt_lower:
+
+                colors = ["red", "blue", "green", "yellow"]
+                shapes = ["cube", "sphere", "cylinder"]
+
+                color = None
+                shape = None
+
+                for c in colors:
+                    if c in prompt_lower:
+                        color = c
+
+                for s in shapes:
+                    if s in prompt_lower:
+                        shape = s
+
+                if color and shape:
+
+                    print(f"\n🧱 Stacking all {color} {shape}s")
+
+                    sim.run_stack_task(color, shape)
+
+                    continue
+
+                else:
+                    print("❌ Could not understand stacking command")
+                    continue
+            
             print(f"\n🔍 Processing prompt: '{prompt}'")
             
             # Check if user wants full scene analysis

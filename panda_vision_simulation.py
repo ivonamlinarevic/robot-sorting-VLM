@@ -107,6 +107,10 @@ class VisionLanguagePandaSimulation:
             }
         }
         
+        # Stacking the objects
+        self.stack_position = [0.3, -0.3, 0.65]   # gdje će nastati toranj
+        self.cube_height = 0.05                   # visina kocke
+        
     def place_object_in_specific_zone(self, object_name, zone_name):
     
         zone_centers = self.detect_zones_visually()
@@ -218,6 +222,13 @@ class VisionLanguagePandaSimulation:
                 'size': 0.075
             },
             {
+                'name': 'red_cube2',
+                'shape': 'cube',
+                'position': [0.55, 0.2, table_surface_z],
+                'color': [1, 0, 0, 1],  # Red
+                'size': object_size
+            },
+            {
                 'name': 'red_sphere',
                 'shape': 'sphere', 
                 'position': [0.6, 0.1, table_surface_z],
@@ -243,6 +254,21 @@ class VisionLanguagePandaSimulation:
                 'shape': 'cube',
                 'position': [0.5, -0.2, table_surface_z],
                 'color': [0, 0, 1, 1],  # Blue
+                'size': object_size
+            },
+            {
+                'name': 'blue_cube2',
+                'shape': 'cube',
+                'position': [0.55, -0.05, table_surface_z],
+                'color': [0, 0, 1, 1],
+                'size': object_size
+            },
+
+            {
+                'name': 'blue_cube3',
+                'shape': 'cube',
+                'position': [0.45, 0.15, table_surface_z],
+                'color': [0, 0, 1, 1],
                 'size': object_size
             }
         ]
@@ -1581,6 +1607,91 @@ class VisionLanguagePandaSimulation:
 
         return zone_centers
   
+    def find_objects(self, color=None, shape=None):
+
+        matching_objects = []
+
+        for obj_name, obj_info in self.objects.items():
+
+            obj_color = obj_name.split("_")[0]
+            obj_shape = obj_info["config"]["shape"]
+
+            if color and obj_color != color:
+                continue
+
+            if shape and obj_shape != shape:
+                continue
+
+            matching_objects.append(obj_name)
+
+        return matching_objects
+    
+    def stack_objects(self, object_list, zone_name):
+
+        print(f"Stacking objects: {object_list}")
+
+        zone_config = self.sorting_zones[zone_name]
+        zone_position = zone_config["position"]
+
+        base_x = zone_position[0]
+        base_y = zone_position[1]
+        base_z = zone_position[2] + 0.05
+
+        for i, obj_name in enumerate(object_list):
+
+            success = self.pick_object(obj_name)
+
+            if not success:
+                continue
+
+            stack_height = base_z + i * self.cube_height
+
+            place_pos = [base_x, base_y, stack_height]
+
+            print(f"Placing {obj_name} at stack height {stack_height}")
+
+            self.safe_move_to_position([base_x, base_y, stack_height + 0.2])
+            self.move_to_position(place_pos)
+
+            self.control_gripper(self.gripper_open_position)
+
+            self.safe_move_to_position([base_x, base_y, stack_height + 0.2])
+
+            self.move_to_position(self.home_position)
+
+        # Final image
+        print("\nFinal stacked result:")
+
+        final_image = self.capture_camera_image()
+
+        fig, ax = plt.subplots(1,1, figsize=(10,8))
+        ax.imshow(final_image)
+        ax.set_title("Final Scene - Stacked Objects")
+        ax.axis("off")
+
+        plt.tight_layout()
+        plt.show()
+        
+    def run_stack_task(self, color, shape):
+
+        print(f"\nSTACK TASK: stack all {color} {shape}s")
+
+        objects = self.find_objects(color=color, shape=shape)
+
+        if not objects:
+            print("❌ No matching objects found")
+            return
+
+        print("Detected objects:", objects)
+
+        zone_name = f"{color}_zone"
+
+        if zone_name not in self.sorting_zones:
+            print(f"❌ No zone for color {color}")
+            return
+
+        self.stack_objects(objects, zone_name)   
+
 
 # This file is intended to be imported as a module.
 # Do not run as a standalone script.
