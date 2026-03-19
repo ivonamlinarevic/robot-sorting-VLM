@@ -89,7 +89,9 @@ def main():
                     bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgray', alpha=0.7))
         
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()
         
         # Run selected demo mode
         if choice == "2":
@@ -129,10 +131,21 @@ def main():
                 print("⚠️  Some objects could not be sorted correctly.")
         else:
 
+            print(f"\n{'='*60}")
+            print(f"🎯 INTERACTIVE TEXT PROMPT DEMO")
+            print(f"{'='*60}")
+            print("Enter text prompts to select objects for the robot to pick up!")
+            print("Available objects: red_cube, blue_cube, green_sphere, yellow_cylinder")
+            print("Example prompt:")
+            print("  • 'move the blue OBJECT to the red box'")
+            print()
+            print("Type 'quit' or 'exit' to stop")
+            print(f"{'='*60}")
+            
             while True:
 
-                command = input("\nEnter command (or 'exit'): ")
-
+                command = input("\nEnter command: ")
+		
                 if command.lower() == "exit":
                     break
 
@@ -170,12 +183,7 @@ def run_interactive_text_prompt_demo(sim):
     print("  • 'round thing'")
     print("  • 'yellow cylinder'")
     print("  • 'something green'")
-    print("  • 'pick up the color with most amount of objects' (try full scene!)")
-    print()
-    print("ANALYSIS MODES:")
-    print("• Type 'full:' before your prompt to use full scene analysis")
-    print("• Example: 'full: pick the color with most objects'")
-    print("• Regular prompts use individual object analysis")
+    print("  • 'stack blue cubes'")
     print()
     print("Type 'quit' or 'exit' to stop")
     print(f"{'='*60}")

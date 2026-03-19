@@ -83,44 +83,50 @@ class VisionLanguagePandaSimulation:
         self.home_position = [0.3, 0.0, 0.85]
         self.place_position = [0.2, 0.3, 0.6]  # Where to place selected objects
         
+        table_z = 0.65
+        zone_thickness = 0.02
+
         # Color sorting zones - left and right of robot
         self.sorting_zones = {
             'red_zone': {
-                'position': [-0.1, 0.3, 0.65],  # Left side
+                'position': [0.0, 0.3, table_z - zone_thickness/2 ],  # Left side
                 'color': [1, 0, 0, 0.3],        # Semi-transparent red
-                'size': [0.15, 0.15, 0.02]      # 15cm x 15cm x 2cm
+                'size': [0.3, 0.3, 0.02]      # 30cm x 30cm x 2cm
             },
             'blue_zone': {
-                'position': [-0.1, -0.3, 0.65], # Left side, back
+                'position': [0.0, -0.3, table_z - zone_thickness/2], # Left side, back
                 'color': [0, 0, 1, 0.3],        # Semi-transparent blue
-                'size': [0.15, 0.15, 0.02]
+                'size': [0.3, 0.3, 0.02]      # 30cm x 30cm x 2cm
             },
             'green_zone': {
-                'position': [0.7, -0.3, 0.65],   # Right side
+                 'position': [0.8, 0.3, table_z - zone_thickness/2],   # Right side
                 'color': [0, 1, 0, 0.3],        # Semi-transparent green
-                'size': [0.15, 0.15, 0.02]
+                'size': [0.3, 0.3, 0.02]      # 30cm x 30cm x 2cm
             },
             'yellow_zone': {
-                'position': [0.7, 0.3, 0.65],  # Right side, back
+                'position': [0.8, -0.3, table_z - zone_thickness/2],  # Right side, back
                 'color': [1, 1, 0, 0.3],        # Semi-transparent yellow
-                'size': [0.15, 0.15, 0.02]
+                'size': [0.3, 0.3, 0.02]      # 30cm x 30cm x 2cm
             }
         }
         
         # Stacking the objects
         self.stack_position = [0.3, -0.3, 0.65]   # gdje će nastati toranj
-        self.cube_height = 0.05                   # visina kocke
+        self.cube_height = 0.048                   # visina kocke
         
     def place_object_in_specific_zone(self, object_name, zone_name):
     
-        zone_centers = self.detect_zones_visually()
+        import random
+        
+        offset_x = random.uniform(-0.08, 0.08)
+        offset_y = random.uniform(-0.08, 0.08)
+        
+        # zone_centers = self.detect_zones_visually()
 
         if zone_name not in self.sorting_zones:
             print(f"❌ Unknown zone: {zone_name}")
             return
 
-        # zone_config = self.sorting_zones[zone_name]
-        # zone_position = zone_config['position']
         zone_config = self.sorting_zones[zone_name]
         zone_id = self.zone_ids[zone_name]
         zone_position, _ = p.getBasePositionAndOrientation(zone_id)
@@ -132,11 +138,18 @@ class VisionLanguagePandaSimulation:
         zone_approach = [zone_position[0], zone_position[1], zone_position[2] + 0.25]
         self.safe_move_to_position(zone_approach)
 
-        zone_target = [zone_position[0], zone_position[1], zone_position[2] + 0.05]
+        zone_target = [
+            zone_position[0] + offset_x,
+            zone_position[1] + offset_y,
+            zone_position[2] + 0.05
+        ]
         self.move_to_position(zone_target)
 
         print(f"   Releasing {object_name}...")
         self.control_gripper(self.gripper_open_position)
+        for _ in range(120):
+            p.stepSimulation()
+            time.sleep(1./240.)
 
         retreat_pos = [zone_position[0], zone_position[1], zone_position[2] + 0.25]
         self.move_to_position(retreat_pos)
@@ -209,7 +222,6 @@ class VisionLanguagePandaSimulation:
         
         # Object parameters
         object_size = 0.05  # 5cm
-        object_mass = 0.1   # 100g
         table_surface_z = 0.65  # Height of table surface (slightly lower to ensure contact)
         
         # Define different objects with positions and colors
@@ -765,7 +777,10 @@ class VisionLanguagePandaSimulation:
             ax2.set_title("Object Similarity Scores")
         
         plt.tight_layout()
-        plt.show()
+        
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()
         
     # Robot movement methods (adapted from original simulation)
     def set_initial_robot_pose(self):
@@ -934,6 +949,10 @@ class VisionLanguagePandaSimulation:
         print(f"Lifting {object_name}...")
         lift_pos = [obj_pos[0], obj_pos[1], obj_pos[2] + 0.30]  # Increased from 0.15 to 0.30
         self.move_to_position(lift_pos)
+        new_pos, _ = p.getBasePositionAndOrientation(obj_info['id'])
+        if abs(new_pos[2] - obj_pos[2]) < 0.02:
+            print(f"❌ {object_name} NOT GRASPED!")
+            return False
         
         return True
         
@@ -968,7 +987,13 @@ class VisionLanguagePandaSimulation:
         Args:
             object_name (str): Name of the object to determine target zone
         """
-        zone_centers = self.detect_zones_visually()
+        
+        import random
+
+        offset_x = random.uniform(-0.08, 0.08)
+        offset_y = random.uniform(-0.08, 0.08)
+
+        # zone_centers = self.detect_zones_visually()
         print(f"Placing {object_name} in appropriate sorting zone...")
         
         # Determine target zone based on object color
@@ -1000,7 +1025,12 @@ class VisionLanguagePandaSimulation:
         self.safe_move_to_position(zone_approach)
         
         # Lower to zone surface (just above the colored zone)
-        zone_target = [zone_position[0], zone_position[1], zone_position[2] + 0.05]  # Higher above zone
+        # zone_target = [zone_position[0], zone_position[1], zone_position[2] + 0.05]  # Higher above zone
+        zone_target = [
+            zone_position[0] + offset_x,
+            zone_position[1] + offset_y,
+            zone_position[2] + 0.05
+        ]
         self.move_to_position(zone_target)
         
         # Release object
@@ -1057,6 +1087,17 @@ class VisionLanguagePandaSimulation:
         # Step 5: Select best matching object
         print("5. Selecting best matching object...")
         selected_object, best_score = self.select_best_object(similarity_scores)
+        
+        # Is it already in the zone?
+        zone_name = self._get_target_zone_for_object(selected_object)
+
+        if zone_name != "unknown_zone":
+            if self.is_object_in_zone(selected_object, zone_name):
+                print(f"⏭️ {selected_object} already in correct zone — skipping")
+                return {
+                    'selected_object': selected_object,
+                    'skipped': True
+                }
         
         if selected_object:
             print(f"   Selected: {selected_object} (score: {best_score:.4f})")
@@ -1189,7 +1230,9 @@ class VisionLanguagePandaSimulation:
                             weight='bold' if obj_name == object_name else 'normal')
                 
                 plt.tight_layout()
-                plt.show()
+                plt.show(block=False)
+                plt.pause(3)
+                plt.close()
             
             # Step 2: Pick up the object
             print(f"2. Picking up {object_name}...")
@@ -1232,7 +1275,10 @@ class VisionLanguagePandaSimulation:
             ax.set_title("Final Scene - All Objects Sorted by Color")
             ax.axis('off')
             plt.tight_layout()
-            plt.show()
+            plt.show(block=False)
+            plt.pause(3)
+            plt.close()
+            
         
         # Summary
         successful_sorts = sum(1 for r in results if r['success'])
@@ -1259,7 +1305,6 @@ class VisionLanguagePandaSimulation:
 
         for obj_name in descriptors:
 
-            #shape = descriptors[obj_name]["shape"]
             shape = self.objects[obj_name]["config"]["shape"]
 
             print(f"{obj_name} -> {shape}")
@@ -1270,15 +1315,12 @@ class VisionLanguagePandaSimulation:
                 continue
 
             if shape == "cube":            
-                #target = self.sorting_zones["red_zone"]
                 zone = "red_zone"
 
             elif shape == "sphere":
-                #target = self.sorting_zones["green_zone"]
                 zone = "green_zone"
                 
             elif shape == "cylinder":
-                #target = self.sorting_zones["blue_zone"]
                 zone = "blue_zone"
                 
             else:
@@ -1485,7 +1527,9 @@ class VisionLanguagePandaSimulation:
             ax.set_title(name)
             ax.axis('off')
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()
 
     def capture_and_process_scene(self):
 
@@ -1602,7 +1646,9 @@ class VisionLanguagePandaSimulation:
             plt.scatter(cx, cy, s=200)
             plt.text(cx, cy, zone, color="white")
         plt.title("Detected Sorting Zones")
-        plt.show()
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()
 
 
         return zone_centers
@@ -1631,11 +1677,14 @@ class VisionLanguagePandaSimulation:
         print(f"Stacking objects: {object_list}")
 
         zone_config = self.sorting_zones[zone_name]
-        zone_position = zone_config["position"]
+        zone_id = self.zone_ids[zone_name]
+        zone_position, _ = p.getBasePositionAndOrientation(zone_id)
 
         base_x = zone_position[0]
         base_y = zone_position[1]
         base_z = zone_position[2] + 0.05
+        
+        current_height = base_z
 
         for i, obj_name in enumerate(object_list):
 
@@ -1643,21 +1692,32 @@ class VisionLanguagePandaSimulation:
 
             if not success:
                 continue
+                
+            obj_size = self.objects[obj_name]["config"]["size"]
+            
+            stack_height = current_height
+            offset_x = np.random.uniform(-0.003, 0.003)
+            offset_y = np.random.uniform(-0.003, 0.003)
 
-            stack_height = base_z + i * self.cube_height
-
-            place_pos = [base_x, base_y, stack_height]
+            target_x = base_x + offset_x
+            target_y = base_y + offset_y
 
             print(f"Placing {obj_name} at stack height {stack_height}")
 
-            self.safe_move_to_position([base_x, base_y, stack_height + 0.2])
-            self.move_to_position(place_pos)
+            self.safe_move_to_position([target_x, target_y, stack_height + 0.1])
+            self.move_to_position([target_x, target_y, stack_height + obj_size/2])
 
             self.control_gripper(self.gripper_open_position)
-
-            self.safe_move_to_position([base_x, base_y, stack_height + 0.2])
+            
+            for _ in range(120):
+                p.stepSimulation()
+                time.sleep(1./240.)
+            
+            self.safe_move_to_position([target_x, target_y, stack_height + 0.2])
 
             self.move_to_position(self.home_position)
+            
+            current_height += obj_size
 
         # Final image
         print("\nFinal stacked result:")
@@ -1670,7 +1730,9 @@ class VisionLanguagePandaSimulation:
         ax.axis("off")
 
         plt.tight_layout()
-        plt.show()
+        plt.show(block=False)
+        plt.pause(3)
+        plt.close()
         
     def run_stack_task(self, color, shape):
 
@@ -1691,7 +1753,19 @@ class VisionLanguagePandaSimulation:
             return
 
         self.stack_objects(objects, zone_name)   
+        
+    def is_object_in_zone(self, object_name, zone_name, tolerance=0.1):
+    
+        obj_id = self.objects[object_name]['id']
+        obj_pos, _ = p.getBasePositionAndOrientation(obj_id)
 
+        zone_id = self.zone_ids[zone_name]
+        zone_pos, _ = p.getBasePositionAndOrientation(zone_id)
+
+        dx = abs(obj_pos[0] - zone_pos[0])
+        dy = abs(obj_pos[1] - zone_pos[1])
+
+        return dx < tolerance and dy < tolerance
 
 # This file is intended to be imported as a module.
 # Do not run as a standalone script.
