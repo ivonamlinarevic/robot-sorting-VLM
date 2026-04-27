@@ -196,7 +196,7 @@ class VisionLanguagePandaSimulation:
                                   globalScaling=1.0)
         
         # Load the Panda robot arm
-        robot_position = [0.0, 0.0, 0.626]  # On table surface
+        robot_position = [0.0, 0.0, 0.65]  # 0.626; On table surface
         robot_orientation = p.getQuaternionFromEuler([0, 0, 0])
         self.robot_id = p.loadURDF("franka_panda/panda.urdf", 
                                   robot_position, 
@@ -222,7 +222,7 @@ class VisionLanguagePandaSimulation:
         
         # Object parameters
         object_size = 0.05  # 5cm
-        table_surface_z = 0.65  # Height of table surface (slightly lower to ensure contact)
+        table_surface_z = 0.67  # 0.65; Height of table surface (slightly lower to ensure contact)
         
         # Define different objects with positions and colors
         object_configs = [
@@ -1766,6 +1766,99 @@ class VisionLanguagePandaSimulation:
         dy = abs(obj_pos[1] - zone_pos[1])
 
         return dx < tolerance and dy < tolerance
+        
+    def classify_color_hsv(self, crop):
 
+        import cv2
+        img = np.array(crop)
+        hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+
+        h = hsv[:,:,0]
+        v = hsv[:,:,2]
+
+        mean_h = np.mean(h)
+        mean_v = np.mean(v)
+        std_h = np.std(h)
+
+        if mean_v < 50:
+            return "red"   # dark -> usually red objects
+
+        if std_h > 25:
+            return "yellow"  # "colorful"
+
+        if 35 < mean_h < 85:
+            return "green"
+        elif 85 < mean_h < 140:
+            return "blue"
+        else:
+            return "red"
+            
+    def classify_clip_color(self, crop):
+
+        labels = ["red object", "blue object", "green object", "yellow object"]
+
+        inputs = self.processor(
+            text=labels,
+            images=[crop],
+            return_tensors="pt",
+            padding=True
+        ).to(self.device)
+
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            probs = outputs.logits_per_image.softmax(dim=1).cpu().numpy()[0]
+
+        classes = ["red", "blue", "green", "yellow"]
+
+        return classes[np.argmax(probs)]
+
+    def run_quantitative_experiment(self, num_scenes=10):
+
+        all_results = []
+
+        for i in range(num_scenes):
+
+            print(f"\n=== SCENE {i} ===")
+
+            # reset scene
+            p.resetSimulation()
+            self.setup_simulation()
+
+            for _ in range(120):
+                p.stepSimulation()
+
+            # detection
+            _, boxes, crops, _ = self.capture_and_process_scene()
+
+            for obj_name, crop in crops.items():
+
+                gt = obj_name.split("_")[0]
+
+                clip_pred = self.classify_clip_color(crop)
+                hsv_pred = self.classify_color_hsv(crop)
+
+                all_results.append({
+                    "gt": gt,
+                    "clip": clip_pred,
+                    "hsv": hsv_pred
+                })
+
+        return all_results
+        
+from collections import defaultdict
+        
+def compute_accuracy(results, method):
+
+    correct = sum(1 for r in results if r[method] == r["gt"])
+    return correct / len(results) if results else 0
+    
+def compute_confusion_matrix(results, method):
+
+    cm = defaultdict(lambda: defaultdict(int))
+    for r in results:
+        cm[r["gt"]][r[method]] += 1
+
+    return cm
+        
 # This file is intended to be imported as a module.
 # Do not run as a standalone script.

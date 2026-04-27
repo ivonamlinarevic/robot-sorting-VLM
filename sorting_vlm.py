@@ -19,6 +19,7 @@ Usage:
 """
 
 from panda_vision_simulation import VisionLanguagePandaSimulation
+from panda_vision_simulation import compute_accuracy, compute_confusion_matrix
 import pybullet as p
 import time
 import matplotlib.pyplot as plt
@@ -35,9 +36,10 @@ def main():
     print("1. 🎨 Automatic Color Sorting")
     print("2. 🎯 Interactive Text Prompts")
     print("3. 🧠 Natural Language Commands")
+    print("4. 🧪 Quantitative Experiment")
     print()
     
-    choice = input("Select mode (1/2/3, default=3): ").strip()
+    choice = input("Select mode (1/2/3/4, default=3): ").strip()
     
     print("\nThe robot will work with these objects and zones:")
     print("• Objects: Red cube, blue cube, green sphere, yellow cylinder")
@@ -129,6 +131,40 @@ def main():
                 print("🏆 Perfect sorting! All objects placed in correct zones.")
             else:
                 print("⚠️  Some objects could not be sorted correctly.")
+        elif choice == "4":
+
+            print("\n🧪 Running quantitative experiment...")
+
+            results = sim.run_quantitative_experiment(num_scenes=10)
+
+            clip_acc = compute_accuracy(results, "clip")
+            hsv_acc = compute_accuracy(results, "hsv")
+
+            print("\n=== RESULTS ===")
+            print(f"CLIP accuracy: {clip_acc:.3f}")
+            print(f"HSV accuracy: {hsv_acc:.3f}")
+
+            cm_clip = compute_confusion_matrix(results, "clip")
+            cm_hsv = compute_confusion_matrix(results, "hsv")
+
+            print("\nCLIP Confusion Matrix:")
+            print(cm_clip)
+
+            print("\nHSV Confusion Matrix:")
+            print(cm_hsv)
+            methods = ["CLIP", "HSV"]
+            accuracies = [clip_acc, hsv_acc]
+
+            plt.figure()
+            plt.bar(methods, accuracies)
+            plt.ylim(0, 1)
+            plt.ylabel("Accuracy")
+            plt.title("Color Classification Comparison")
+
+            for i, v in enumerate(accuracies):
+                plt.text(i, v + 0.02, f"{v:.2f}", ha='center')
+
+            plt.show()
         else:
 
             print(f"\n{'='*60}")
