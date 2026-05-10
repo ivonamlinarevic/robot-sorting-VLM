@@ -15,7 +15,7 @@ Features:
 - Complete pick-and-place operations for each object
 
 Usage:
-    python3 color_sorting_vlm.py
+    python3 sorting_vlm.py
 """
 
 from panda_vision_simulation import VisionLanguagePandaSimulation
@@ -33,7 +33,7 @@ def main():
     print("🎨 Color Sorting Demonstration")
     print("=" * 40)
     print("Choose your demo mode:")
-    print("1. 🎨 Automatic Color Sorting")
+    print("1. 🎨 Automatic Sorting")
     print("2. 🎯 Interactive Text Prompts")
     print("3. 🧠 Natural Language Commands")
     print("4. 🧪 Quantitative Experiment")
